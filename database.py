@@ -1,40 +1,53 @@
+#!/usr/bin/env python3
+"""
+database.py
+SQLite persistence for leads and sent emails.
+"""
+
 import sqlite3
 from datetime import datetime
 
 DB = "listen.db"
 
+# ── INIT ──────────────────────────────────────────────────────────
+
 def init_db():
     conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    c    = conn.cursor()
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS leads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            company TEXT,
-            contact_name TEXT,
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id       TEXT,
+            company       TEXT,
+            contact_name  TEXT,
             contact_title TEXT,
-            email TEXT,
-            pain_point TEXT,
-            found_at TEXT,
-            emailed INTEGER DEFAULT 0,
+            email         TEXT,
+            pain_point    TEXT,
+            found_at      TEXT,
+            emailed       INTEGER DEFAULT 0,
             ignored_count INTEGER DEFAULT 0
         )
     """)
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS emails (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            company TEXT,
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    TEXT,
+            company    TEXT,
             email_text TEXT,
-            sent_at TEXT
+            sent_at    TEXT
         )
     """)
+
     conn.commit()
     conn.close()
 
+# ── WRITE ─────────────────────────────────────────────────────────
+
 def log_lead(user_id, lead):
     conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    c    = conn.cursor()
     c.execute("""
         INSERT INTO leads (user_id, company, contact_name, contact_title, email, pain_point, found_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -45,14 +58,14 @@ def log_lead(user_id, lead):
         lead.get("contact_title"),
         lead.get("email"),
         lead.get("pain_point"),
-        datetime.now().isoformat()
+        datetime.now().isoformat(),
     ))
     conn.commit()
     conn.close()
 
 def log_email(user_id, company, email_text):
     conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    c    = conn.cursor()
     c.execute("""
         INSERT INTO emails (user_id, company, email_text, sent_at)
         VALUES (?, ?, ?, ?)
@@ -63,9 +76,11 @@ def log_email(user_id, company, email_text):
     conn.commit()
     conn.close()
 
+# ── READ ──────────────────────────────────────────────────────────
+
 def get_ignored_leads(user_id):
     conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    c    = conn.cursor()
     c.execute("""
         SELECT company, contact_name, contact_title, pain_point, found_at
         FROM leads
@@ -74,4 +89,13 @@ def get_ignored_leads(user_id):
     """, (user_id,))
     rows = c.fetchall()
     conn.close()
-    return [{"company": r[0], "contact_name": r[1], "contact_title": r[2], "pain_point": r[3], "found_at": r[4]} for r in rows]
+    return [
+        {
+            "company":       r[0],
+            "contact_name":  r[1],
+            "contact_title": r[2],
+            "pain_point":    r[3],
+            "found_at":      r[4],
+        }
+        for r in rows
+    ]
